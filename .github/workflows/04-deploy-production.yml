@@ -1,0 +1,38 @@
+name: 04 - Swap Staging to Production
+
+on:
+  workflow_run:
+    workflows:
+      - "03 - Staging Smoke Test"
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  swap-to-production:
+    name: Swap Staging to Production
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure login
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Swap staging slot into production (zero downtime)
+        run: |
+          az webapp deployment slot swap \
+            --resource-group ${{ vars.RESOURCE_GROUP }} \
+            --name ${{ vars.APP_NAME }} \
+            --slot staging \
+            --target-slot production
+
+      - name: Notify Discord of successful release
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
+          status: "Success"
+          title: "Production swap complete - zero downtime release"
+          color: 0x00ff00
