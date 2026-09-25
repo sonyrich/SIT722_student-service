@@ -1,0 +1,40 @@
+name: 00 - Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+  workflow_dispatch:
+
+jobs:
+  terraform:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./terraform
+    env:
+      TF_VAR_resource_group_name: ${{ vars.RESOURCE_GROUP }}
+      TF_VAR_acr_name: ${{ vars.ACR_NAME }}
+      TF_VAR_app_name: ${{ vars.APP_NAME }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_version: 1.9.0
+      - name: Azure Login
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Verify Azure context
+        run: az account show
+      - run: terraform init
+      - run: terraform validate
+      - run: terraform plan -out=tfplan
+      - run: terraform apply -auto-approve tfplan
+        if: github.ref == 'refs/heads/main'
