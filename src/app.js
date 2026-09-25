@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 
 app.get("/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.status(500).json({ status: "broken" });
 });
 
 app.get("/", (req, res) => {
